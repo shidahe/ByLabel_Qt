@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>926</width>
+    <height>679</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>PixInterpreter</string>
+  </property>
+  <property name="windowIcon">
+   <iconset resource="icons/icons.qrc">
+    <normaloff>:/new/icons/favicon.ico</normaloff>:/new/icons/favicon.ico</iconset>
+  </property>
+  <widget class="QWidget" name="centralWidget">
+   <layout class="QHBoxLayout" name="horizontalLayout">
+    <item>
+     <widget class="QTreeView" name="treeView">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>200</width>
+        <height>8000000</height>
+       </size>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="LabelWidget" name="myGraphicsView">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="cursor" stdset="0">
+       <cursorShape>ArrowCursor</cursorShape>
+      </property>
+      <property name="mouseTracking">
+       <bool>false</bool>
+      </property>
+      <property name="interactive">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>926</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="actionOpen_Single_Image"/>
+    <addaction name="actionOpen_Images"/>
+    <addaction name="actionOpen_Video"/>
+    <addaction name="separator"/>
+    <addaction name="actionOutput_Setting"/>
+    <addaction name="separator"/>
+    <addaction name="actionClear_WorkSpace"/>
+   </widget>
+   <addaction name="menuFile"/>
+  </widget>
+  <widget class="QToolBar" name="mainToolBar">
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+   <addaction name="actionME"/>
+   <addaction name="actionYOU"/>
+  </widget>
+  <widget class="QStatusBar" name="statusBar"/>
+  <action name="actionOpen_Single_Image">
+   <property name="text">
+    <string>Open Image</string>
+   </property>
+  </action>
+  <action name="actionME">
+   <property name="icon">
+    <iconset resource="icons/icons.qrc">
+     <normaloff>:/new/icons/favicon.ico</normaloff>:/new/icons/favicon.ico</iconset>
+   </property>
+   <property name="text">
+    <string>ME</string>
+   </property>
+  </action>
+  <action name="actionYOU">
+   <property name="text">
+    <string>YOU</string>
+   </property>
+  </action>
+  <action name="actionOpen_Images">
+   <property name="text">
+    <string>Open Images</string>
+   </property>
+  </action>
+  <action name="actionOpen_Video">
+   <property name="text">
+    <string>Open Video</string>
+   </property>
+  </action>
+  <action name="actionOutput_Setting">
+   <property name="text">
+    <string>Output Setting...</string>
+   </property>
+  </action>
+  <action name="actionClear_WorkSpace">
+   <property name="text">
+    <string>Close Current WorkSpace</string>
+   </property>
+  </action>
+ </widget>
+ <layoutdefault spacing="6" margin="11"/>
+ <customwidgets>
+  <customwidget>
+   <class>LabelWidget</class>
+   <extends>QGraphicsView</extends>
+   <header>labelwidget.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources>
+  <include location="icons/icons.qrc"/>
+ </resources>
+ <connections/>
+</ui>
