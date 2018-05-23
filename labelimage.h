@@ -16,6 +16,7 @@ public:
 
 protected:
 
+
 private:
     QImage qimage;
     LabelWidget* parent;

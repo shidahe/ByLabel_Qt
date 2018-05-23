@@ -1,6 +1,9 @@
 #include "labelwidget.h"
 #include "labelimage.h"
 #include <QKeyEvent>
+#include <QtDebug>
+#include "ED.h"
+#include "edgeitem.h"
 
 LabelWidget::LabelWidget(QWidget *parent)
     : QGraphicsView(parent)
@@ -9,23 +12,74 @@ LabelWidget::LabelWidget(QWidget *parent)
     scene->setBackgroundBrush(Qt::gray);
     setScene(scene);
     setTransformationAnchor(AnchorUnderMouse);
-    scale(qreal(1.0), qreal(1.0));
     setMinimumSize(400, 400);
     pImage = NULL;
 }
 
-void LabelWidget::showImage(const cv::Mat& image)
+void LabelWidget::reset()
 {
     if (pImage) {
         scene()->removeItem(pImage);
         delete pImage;
     }
+    pImage = NULL;
+    for (auto pEdge : pEdges)
+        delete pEdge;
+    pEdges.clear();
+
+    resetMatrix();
+}
+
+void LabelWidget::showImage(const cv::Mat& image)
+{
+    reset();
+
     pImage = new LabelImage(this, image);
     scene()->addItem(pImage);
-
     pImage->setPos(0,0);
 
+    addEdges(image);
+
     repaint();
+}
+
+void LabelWidget::addEdges(const cv::Mat &image)
+{
+    std::vector<std::list<cv::Point>> edges;
+    ED::detectEdges(image, edges);
+    for (const auto &edge : edges){
+        if (edge.size() == 0) continue;
+        EdgeItem* item = new EdgeItem(this, pImage, edge);
+        pEdges.push_back(item);
+        scene()->addItem(item);
+        item->setPos(item->center());
+    }
+
+}
+
+
+void LabelWidget::mousePressEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::MidButton)
+    {
+        setInteractive(false);
+        setDragMode(ScrollHandDrag);
+        QMouseEvent fake(event->type(), event->pos(), Qt::LeftButton, Qt::LeftButton, event->modifiers());
+        QGraphicsView::mousePressEvent(&fake);
+    }
+    else QGraphicsView::mousePressEvent(event);
+}
+
+void LabelWidget::mouseReleaseEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::MidButton)
+    {
+        QMouseEvent fake(event->type(), event->pos(), Qt::LeftButton, Qt::LeftButton, event->modifiers());
+        QGraphicsView::mouseReleaseEvent(&fake);
+        setDragMode(NoDrag);
+        setInteractive(true);
+    }
+    else QGraphicsView::mouseReleaseEvent(event);
 }
 
 #if QT_CONFIG(wheelevent)
@@ -44,18 +98,4 @@ void LabelWidget::scaleView(qreal scaleFactor)
     scale(scaleFactor, scaleFactor);
 }
 
-//void LabelWidget::drawBackground(QPainter *painter, const QRectF &rect)
-//{
-//    Q_UNUSED(rect);
-//
-//    painter->drawImage(rect.left(), rect.top(), _qimage);
-//    painter->end();
-//}
-
-//void LabelWidget::paintEvent(QPaintEvent* /*event*/) {
-//    // Display the image
-//    QPainter painter(this);
-//    painter.drawImage(QPoint(0,0), _qimage);
-//    painter.end();
-//}
 

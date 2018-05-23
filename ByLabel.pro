@@ -28,13 +28,17 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     mat_qimage.cpp \
-    labelimage.cpp
+    labelimage.cpp \
+    ED.cpp \
+    edgeitem.cpp
 
 HEADERS += \
     labelwidget.h \
     mainwindow.h \
     mat_qimage.h \
-    labelimage.h
+    labelimage.h \
+    ED.h \
+    edgeitem.h
 
 FORMS += \
     mainwindow.ui

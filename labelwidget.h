@@ -6,6 +6,7 @@
 #include <opencv2/core/core.hpp>
 
 class LabelImage;
+class EdgeItem;
 
 class LabelWidget : public QGraphicsView
 {
@@ -13,11 +14,16 @@ class LabelWidget : public QGraphicsView
 public:
     LabelWidget(QWidget *parent = 0);
 
+    void reset();
+
     void showImage(const cv::Mat& image);
+    void addEdges(const cv::Mat& image);
 
 public slots:
 
 protected:
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
 
 #if QT_CONFIG(wheelevent)
     void wheelEvent(QWheelEvent *event) override;
@@ -27,6 +33,7 @@ protected:
 
 private:
     LabelImage* pImage;
+    std::vector<EdgeItem *> pEdges;
 };
 
 #endif // LABELWIDGET_H
