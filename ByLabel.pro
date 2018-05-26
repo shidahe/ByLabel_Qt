@@ -30,7 +30,8 @@ SOURCES += \
     mat_qimage.cpp \
     labelimage.cpp \
     ED.cpp \
-    edgeitem.cpp
+    edgeitem.cpp \
+    endpoint.cpp
 
 HEADERS += \
     labelwidget.h \
@@ -38,13 +39,16 @@ HEADERS += \
     mat_qimage.h \
     labelimage.h \
     ED.h \
-    edgeitem.h
+    edgeitem.h \
+    endpoint.h
 
 FORMS += \
     mainwindow.ui
 
-INCLUDEPATH += /usr/local/include/opencv -I/usr/local/include
-LIBS += `pkg-config opencv --libs`
+#INCLUDEPATH += `pkg-config --cflags opencv`
+#LIBS += `pkg-config --libs opencv`
+CONFIG += link_pkgconfig
+PKGCONFIG += opencv
 
 SUBDIRS += \
     ByLabel.pro

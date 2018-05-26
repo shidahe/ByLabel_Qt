@@ -12,6 +12,7 @@ EdgeItem::EdgeItem(LabelWidget *labelWidget, LabelImage* labelImage, const std::
 
     for (auto point : points) {
         QPointF curr(point.x, point.y);
+        // ignore duplicate pixels at same location
         if (!prev.isNull() && prev == curr) continue;
         if (curr.x() < tl.x()) tl.setX(curr.x());
         if (curr.x() > br.x()) br.setX(curr.x());
@@ -19,39 +20,50 @@ EdgeItem::EdgeItem(LabelWidget *labelWidget, LabelImage* labelImage, const std::
         if (curr.y() > br.y()) br.setY(curr.y());
         qpoints.push_back(curr);
         prev = curr;
-//        qDebug() << curr.x() << curr.y();
     }
     bbx.setTopLeft(tl);
     bbx.setBottomRight(br);
 
+    // spoints: points in local coordinate (origin at bounding rectangle center)
     for (auto point : qpoints)
         spoints.push_back(point - (br + tl)/2);
 
     color = Qt::green;
-    borderWidth = 0.0;
+    borderWidth = 0.1;
+    edgeWidth = 1.2;
+    // padding to the bouding rectangle, need to cover the border of edge pixels
+    padding = (edgeWidth-1)/2 + borderWidth;
 
     setZValue(0);
-//    setFlag(ItemIsMovable);
-    setAcceptHoverEvents(true);
+}
+
+std::list<QPointF> EdgeItem::points() const
+{
+    return qpoints;
 }
 
 QPointF EdgeItem::center() const
 {
-    return QPointF(image->boundingRect().left() + (bbx.left() + bbx.right())/2,
-                   image->boundingRect().top() + (bbx.top() + bbx.bottom())/2);
+    // center of bounding rectangle in scene coordinate
+    return QPointF(image->boundingRect().left() + (bbx.left()+bbx.right())/2,
+                   image->boundingRect().top() + (bbx.top()+bbx.bottom())/2);
 }
 
 QRectF EdgeItem::boundingRect() const
 {
-    int padding = 2;
-    return QRectF(-(bbx.width()+padding)/2 , -(bbx.height()+padding)/2, bbx.width()+padding, bbx.height()+padding);
+    // bounding rectangle in local coordinate
+    return QRectF(-bbx.width()/2-padding, -bbx.height()/2-padding,
+                  bbx.width()+1+padding*2, bbx.height()+1+padding*2);
 }
 
 QPainterPath EdgeItem::shape() const
 {
+    // rectangles as pixels
+    float dist = (edgeWidth-1)/2;
     QPainterPath path;
+    path.setFillRule(Qt::WindingFill);
     for (auto point : spoints){
-        path.addRect(point.x(), point.y(), 1, 1);
+        path.addRect(point.x()-dist, point.y()-dist, dist*2+1, dist*2+1);
     }
     return path;
 }
@@ -66,19 +78,15 @@ void EdgeItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, 
     painter->drawPath(shape());
 }
 
-void EdgeItem::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
+void EdgeItem::hoverEnter()
 {
-    Q_UNUSED(event);
-
     color = Qt::red;
     setZValue(1);
     update(boundingRect());
 }
 
-void EdgeItem::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
+void EdgeItem::hoverLeave()
 {
-    Q_UNUSED(event);
-
     color = Qt::green;
     setZValue(0);
     update(boundingRect());

@@ -18,7 +18,7 @@ void MainWindow::on_actionOpen_Single_Image_triggered()
 
     QString fileName = QFileDialog::getOpenFileName(
                     this, "open image file",
-                    ".",
+                    "/home",
                     "Image files (*.bmp *.jpg *.tif *.tiff *.pbm *.pgm *.png *.ppm *.xbm *.xpm);;All files (*.*)");
         if(fileName != "")
         {

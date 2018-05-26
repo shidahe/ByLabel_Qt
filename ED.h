@@ -8,6 +8,8 @@
 #define _ED_H
 
 #include <opencv2/opencv.hpp>
+#include <list>
+#include <vector>
 
 /**
  * @brief: direction of edge
