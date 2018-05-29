@@ -1,10 +1,10 @@
 #include "edgeitem.h"
 #include "labelimage.h"
-
+#include "endpoint.h"
 #include <QtDebug>
 
-EdgeItem::EdgeItem(LabelWidget *labelWidget, LabelImage* labelImage, const std::list<cv::Point>& points)
-    : image(labelImage), parent(labelWidget)
+EdgeItem::EdgeItem(LabelImage* labelImage, const std::list<cv::Point>& points)
+    : image(labelImage)
 {
     QPointF tl(points.front().x, points.front().y);
     QPointF br(points.front().x, points.front().y);
@@ -34,10 +34,34 @@ EdgeItem::EdgeItem(LabelWidget *labelWidget, LabelImage* labelImage, const std::
     // padding to the bouding rectangle, need to cover the border of edge pixels
     padding = (edgeWidth-1)/2 + borderWidth;
 
+    pHead = NULL;
+    pTail = NULL;
+
     setZValue(0);
 }
 
-std::list<QPointF> EdgeItem::points() const
+void EdgeItem::createEndPoints()
+{
+    if (pHead) delete pHead;
+    pHead = new EndPoint(this, image, 0);
+    scene()->addItem(pHead);
+
+    if (pTail) delete pTail;
+    pTail = new EndPoint(this, image, qpoints.size()-1);
+    scene()->addItem(pTail);
+}
+
+EndPoint* EdgeItem::head() const
+{
+    return pHead;
+}
+
+EndPoint* EdgeItem::tail() const
+{
+    return pTail;
+}
+
+std::vector<QPointF> EdgeItem::points() const
 {
     return qpoints;
 }
@@ -82,6 +106,8 @@ void EdgeItem::hoverEnter()
 {
     color = Qt::red;
     setZValue(1);
+    if(pHead) pHead->setVisible(true);
+    if(pTail) pTail->setVisible(true);
     update(boundingRect());
 }
 
@@ -89,6 +115,8 @@ void EdgeItem::hoverLeave()
 {
     color = Qt::green;
     setZValue(0);
+    if(pHead) pHead->setVisible(false);
+    if(pTail) pTail->setVisible(false);
     update(boundingRect());
 }
 
