@@ -7,7 +7,9 @@
 class EndPoint : public QGraphicsItem
 {
 public:
-    EndPoint(EdgeItem* edgeItem, LabelImage* labelImage, int pointIndex);
+    EndPoint(EdgeItem* edgeItem, LabelImage* labelImage, unsigned int pointIndex);
+
+    unsigned int indexOnEdge() const;
 
     QRectF boundingRect() const override;
     QPainterPath shape() const override;
@@ -21,13 +23,13 @@ protected:
 
 private:
     QPointF oldPos;
-    float radius;
+    double radius;
     QColor color;
-    float borderWidth;
-    float padding;
+    double borderWidth;
+    double padding;
     EdgeItem* parent;
     LabelImage* image;
-    int index;
+    unsigned int index;
 };
 
 #endif // ENDPOINT_H

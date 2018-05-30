@@ -1,8 +1,12 @@
 #include "labelimage.h"
 #include "mat_qimage.h"
 #include "edgeitem.h"
+#include "endpoint.h"
 #include <QGraphicsSceneHoverEvent>
 #include "ED.h"
+#include <QKeyEvent>
+#include <QDebug>
+#include <QTime>
 
 LabelImage::LabelImage(LabelWidget *labelWidget, const cv::Mat& image)
     : parent(labelWidget)
@@ -10,6 +14,9 @@ LabelImage::LabelImage(LabelWidget *labelWidget, const cv::Mat& image)
     qimage = mat_to_qimage_ref(image);
     setZValue(-1);
     setAcceptHoverEvents(true);
+//    setCacheMode(ItemCoordinateCache);
+
+    pCurrEdge = NULL;
     kdtree = NULL;
     radiusNN = 10;
 }
@@ -21,11 +28,14 @@ LabelImage::~LabelImage()
         kdtree = NULL;
     }
     ind2edge.clear();
+    global2local.clear();
     edgePoints.clear();
 
     for (auto pEdge : pEdges)
         delete pEdge;
     pEdges.clear();
+
+    pCurrEdge = NULL;
 }
 
 void LabelImage::addEdges(const cv::Mat &image)
@@ -35,7 +45,7 @@ void LabelImage::addEdges(const cv::Mat &image)
     for (const auto &edge : edges){
         if (edge.size() == 0) continue;
         EdgeItem* item = new EdgeItem(this, edge);
-        pEdges.push_back(item);
+        pEdges.insert(item);
         scene()->addItem(item);
         item->setPos(item->center());
         item->createEndPoints();
@@ -50,18 +60,25 @@ void LabelImage::buildKD()
     if (kdtree) delete(kdtree);
 
     for (auto pEdge : pEdges) {
-        for (auto point : pEdge->points()){
+        edge2ind[pEdge] = edgePoints.size();
+        for (int i = 0; i < (int)pEdge->points().size(); i++){
+            auto point = pEdge->points()[i];
             cv::Point2f curr(point.x()+0.5, point.y()+0.5);
             edgePoints.push_back(curr);
             ind2edge[edgePoints.size()-1] = pEdge;
+            global2local[edgePoints.size()-1] = i;
+            pointMask[edgePoints.size()-1] = true;
         }
     }
-    kdtree = new cv::flann::Index(cv::Mat(edgePoints).reshape(1), cv::flann::KDTreeIndexParams());
+    kdtree = new cv::flann::Index(cv::Mat(edgePoints).reshape(1), cv::flann::KDTreeIndexParams(1));
+
 }
 
-EdgeItem* LabelImage::getNN(const QPointF& pos)
+void LabelImage::searchNN(const QPointF& pos, EdgeItem*& pEdge, int& localIndex)
 {
-    if (!kdtree) return NULL;
+    pEdge = NULL;
+
+    if (!kdtree) return;
 
     std::vector<float> query;
     query.push_back(pos.x());
@@ -71,18 +88,31 @@ EdgeItem* LabelImage::getNN(const QPointF& pos)
     std::vector<float> dists;
     kdtree->radiusSearch(query, indices, dists, pow(radiusNN,2), 1);
 
-//    qDebug() << query;
-//    qDebug() << indices << edgePoints.size() << ind2edge.size();
-//    qDebug() << dists;
-//    qDebug() << edgePoints[indices[0]].x << edgePoints[indices[0]].y;
+    for (int i = 0; i < (int)indices.size(); i++) {
+        if (pointMask[indices[i]] && dists[i] > 0) {
+            pEdge = ind2edge[indices[i]];
+            localIndex = global2local[indices[i]];
+            break;
+        }
+    }
 
-//    if (indices.size() != 1 || dists.size() != 1) return NULL;
-//    if (dists[0] <= 0 || dists[0] > pow(radiusNN,2)) return NULL;
-//    if (ind2edge.find(indices[0]) == ind2edge.end()) return NULL;
+}
 
-    if (dists[0] <= 0) return NULL;
+void LabelImage::searchNN(const QPointF& pos, EdgeItem*& pEdge)
+{
+    int temp;
+    searchNN(pos, pEdge, temp);
+}
 
-    return ind2edge[indices[0]];
+void LabelImage::updateNNMask(EdgeItem* pEdge)
+{
+    for (int i = 0; i < (int)pEdge->points().size(); i++) {
+        if (pEdge->pointVisible(i)) {
+            pointMask[edge2ind[pEdge]+i] = true;
+        } else {
+            pointMask[edge2ind[pEdge]+i] = false;
+        }
+    }
 }
 
 QRectF LabelImage::boundingRect() const
@@ -102,26 +132,38 @@ void LabelImage::paint(QPainter *painter, const QStyleOptionGraphicsItem *option
 
 void LabelImage::hoverMoveEvent(QGraphicsSceneHoverEvent *event)
 {
-    QPointF lastPos = event->lastPos() - boundingRect().topLeft();
-    EdgeItem* prev = getNN(lastPos);
-    if(prev) prev->hoverLeave();
-    QPointF pos = event->pos() - boundingRect().topLeft();
-    EdgeItem* curr = getNN(pos);
-    if(curr) curr->hoverEnter();
+    QPointF lastPos = item2image(event->lastPos());
+    EdgeItem* prev;
+    searchNN(lastPos, prev);
+    QPointF pos = item2image(event->pos());
+    EdgeItem* curr;
+    int localIndex;
+    searchNN(pos, curr, localIndex);
+    if(prev && prev != curr) prev->hoverLeave();
+    pCurrEdge = curr;
+    if(curr) curr->hoverEnter(pos, localIndex);
+    QGraphicsItem::hoverMoveEvent(event);
 }
 
 void LabelImage::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
 {
-    QPointF pos = event->pos() - boundingRect().topLeft();
-    EdgeItem* curr = getNN(pos);
-    if(curr) curr->hoverEnter();
+    QPointF pos = item2image(event->pos());
+    EdgeItem* curr;
+    int localIndex;
+    searchNN(pos, curr, localIndex);
+    pCurrEdge = curr;
+    if(curr) curr->hoverEnter(pos, localIndex);
+    QGraphicsItem::hoverEnterEvent(event);
 }
 
 void LabelImage::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
 {
-    QPointF lastPos = event->lastPos() - boundingRect().topLeft();
-    EdgeItem* prev = getNN(lastPos);
+    QPointF lastPos = item2image(event->lastPos());
+    EdgeItem* prev;
+    searchNN(lastPos, prev);
+    pCurrEdge = NULL;
     if(prev) prev->hoverLeave();
+    QGraphicsItem::hoverLeaveEvent(event);
 }
 
 QPointF LabelImage::image2item(const QPointF &pos)
@@ -132,5 +174,50 @@ QPointF LabelImage::image2item(const QPointF &pos)
 QPointF LabelImage::item2image(const QPointF &pos)
 {
     return pos - boundingRect().topLeft();
+}
+
+EdgeItem* LabelImage::currEdge()
+{
+    return pCurrEdge;
+}
+
+void LabelImage::splitEdge()
+{
+    QTime myTime;
+    myTime.start();
+
+    qDebug() << "splitting edge";
+
+    if (pCurrEdge && pCurrEdge->showingSplit()) {
+        std::vector<EdgeItem*> newEdges = pCurrEdge->split();
+        if (newEdges.size() != 2) return;
+
+        for (auto edge : newEdges){
+            scene()->addItem(edge);
+            edge->setPos(edge->center());
+            edge->createEndPoints();
+        }
+
+        pEdges.erase(pCurrEdge);
+        pEdges.insert(newEdges[0]);
+        pEdges.insert(newEdges[1]);
+
+        for (int i = 0; i < (int)(pCurrEdge->points().size()); i++){
+            if (i < (int)(newEdges[0]->points().size())){
+                ind2edge[edge2ind[pCurrEdge]+i] = newEdges[0];
+            } else {
+                ind2edge[edge2ind[pCurrEdge]+i] = newEdges[1];
+                global2local[edge2ind[pCurrEdge]+i] = i - (int)(newEdges[0]->points().size());
+            }
+        }
+        edge2ind[newEdges[0]] = edge2ind[pCurrEdge];
+        edge2ind[newEdges[1]] = edge2ind[pCurrEdge] + (int)(newEdges[0]->points().size());
+        edge2ind.erase(pCurrEdge);
+
+        delete pCurrEdge;
+        pCurrEdge = NULL;
+    }
+
+    qDebug() << myTime.elapsed();
 }
 

@@ -25,6 +25,8 @@ protected:
 #endif
     void scaleView(qreal scaleFactor);
 
+    void keyPressEvent(QKeyEvent *event) override;
+
 private:
     LabelImage* pImage;
 };

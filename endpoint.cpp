@@ -1,13 +1,14 @@
 #include "endpoint.h"
 #include "labelimage.h"
+#include <QGraphicsSceneMouseEvent>
 #include <QDebug>
 
-EndPoint::EndPoint(EdgeItem* edgeItem, LabelImage* labelImage, int pointIndex)
+EndPoint::EndPoint(EdgeItem* edgeItem, LabelImage* labelImage, unsigned int pointIndex)
     : parent(edgeItem), image(labelImage), index(pointIndex)
 {
     QPointF imagePos = parent->points()[index] + QPointF(0.5,0.5);
     radius = 1;
-    color = Qt::darkRed;
+    color = Qt::blue;
     borderWidth = 0.2;
     padding = borderWidth;
 
@@ -15,38 +16,50 @@ EndPoint::EndPoint(EdgeItem* edgeItem, LabelImage* labelImage, int pointIndex)
     oldPos = pos();
     setFlag(ItemIsMovable);
     setFlag(ItemSendsGeometryChanges);
+//    setCacheMode(DeviceCoordinateCache);
     setZValue(2);
     setVisible(false);
+}
+
+unsigned int EndPoint::indexOnEdge() const
+{
+    return index;
 }
 
 QVariant EndPoint::itemChange(GraphicsItemChange change, const QVariant &value)
 {
     QPointF newPos = value.toPointF();
     if (change == ItemPositionChange && scene()) {
-        QPointF forward, backward;
-        double len_f, len_b, len_o;
-        len_f = std::numeric_limits<double>::infinity();
-        len_b = std::numeric_limits<double>::infinity();
+        QPointF inc, dec;
+        double len_i, len_d, len_o;
+        len_i = std::numeric_limits<double>::infinity();
+        len_d = std::numeric_limits<double>::infinity();
         len_o = QLineF(newPos, oldPos).length();
 
-        if (index < int(parent->points().size())-1) {
-            forward = parent->points()[index+1] + QPointF(0.5, 0.5);
-            forward = image->image2item(forward);
-            len_f = QLineF(newPos, forward).length();
+        bool canIncrement = true;
+        if (index+1 >= parent->points().size()) canIncrement = false;
+        if (this == parent->head() && index+1 >= parent->tail()->indexOnEdge()) canIncrement = false;
+
+        bool canDecrement = true;
+        if (index <= 0) canDecrement = false;
+        if (this == parent->tail() && index-1 <= parent->head()->indexOnEdge()) canDecrement = false;
+
+        if (canIncrement) {
+            inc = parent->points()[index+1] + QPointF(0.5, 0.5);
+            inc = image->image2item(inc);
+            len_i = QLineF(newPos, inc).length();
         }
-        if (index > 0) {
-            backward = parent->points()[index-1] + QPointF(0.5, 0.5);
-            backward = image->image2item(backward);
-            len_b = QLineF(newPos, backward).length();
+        if (canDecrement) {
+            dec = parent->points()[index-1] + QPointF(0.5, 0.5);
+            dec = image->image2item(dec);
+            len_d = QLineF(newPos, dec).length();
         }
 
-//        qDebug() << oldPos << newPos;
-//        qDebug() << len_f << len_b << len_o;
-        if (len_f <= len_b && len_f <= len_o){
-            newPos = forward;
+        if (len_i <= len_d && len_i <= len_o){
+            newPos = inc;
             index++;
-        } else if (len_b <= len_f && len_b <= len_o){
-            newPos = backward;
+        } else if (len_d <= len_i && len_d <= len_o){
+            newPos = dec;
             index--;
         } else {
             newPos = oldPos;
@@ -60,12 +73,19 @@ QVariant EndPoint::itemChange(GraphicsItemChange change, const QVariant &value)
 void EndPoint::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
     oldPos = pos();
+    parent->setShowSplit(false);
     update();
     QGraphicsItem::mousePressEvent(event);
 }
 
 void EndPoint::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
+    parent->setShowSplit(true);
+    EdgeItem* nnEdge = NULL;
+    image->searchNN(event->pos(), nnEdge);
+    if (parent != nnEdge)
+        parent->hoverLeave();
+    image->updateNNMask(parent);
     update();
     QGraphicsItem::mouseReleaseEvent(event);
 }
@@ -92,3 +112,4 @@ void EndPoint::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, 
     painter->setBrush(QBrush(color));
     painter->drawPath(shape());
 }
+

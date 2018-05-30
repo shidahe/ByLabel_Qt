@@ -12,6 +12,7 @@ LabelWidget::LabelWidget(QWidget *parent)
     setTransformationAnchor(AnchorUnderMouse);
     setMinimumSize(400, 400);
     pImage = NULL;
+    setFocusPolicy(Qt::StrongFocus);
 }
 
 LabelWidget::~LabelWidget()
@@ -40,6 +41,7 @@ void LabelWidget::showImage(const cv::Mat& image)
     pImage->addEdges(image);
 
     repaint();
+    setFocus();
 }
 
 void LabelWidget::mousePressEvent(QMouseEvent *event)
@@ -82,4 +84,14 @@ void LabelWidget::scaleView(qreal scaleFactor)
     scale(scaleFactor, scaleFactor);
 }
 
+void LabelWidget::keyPressEvent(QKeyEvent *event)
+{
+    switch (event->key()) {
+    case Qt::Key_Space:
+        pImage->splitEdge();
+        break;
+    default:
+        QGraphicsView::keyPressEvent(event);
+    }
+}
 
