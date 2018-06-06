@@ -86,7 +86,8 @@ void LabelImage::searchNN(const QPointF& pos, EdgeItem*& pEdge, int& localIndex)
 
     std::vector<int> indices;
     std::vector<float> dists;
-    kdtree->radiusSearch(query, indices, dists, pow(radiusNN,2), 1);
+    // search for points in the circle
+    kdtree->radiusSearch(query, indices, dists, pow(radiusNN,2), (int)(pow(radiusNN,2)*CV_PI));
 
     for (int i = 0; i < (int)indices.size(); i++) {
         if (pointMask[indices[i]] && dists[i] > 0) {
@@ -192,16 +193,20 @@ void LabelImage::splitEdge()
         std::vector<EdgeItem*> newEdges = pCurrEdge->split();
         if (newEdges.size() != 2) return;
 
-        for (auto edge : newEdges){
-            scene()->addItem(edge);
-            edge->setPos(edge->center());
-            edge->createEndPoints();
-        }
+        scene()->addItem(newEdges[0]);
+        newEdges[0]->setPos(newEdges[0]->center());
+        newEdges[0]->createEndPoints(pCurrEdge->head()->indexOnEdge(), (int)(newEdges[0]->points().size())-1);
 
+        scene()->addItem(newEdges[1]);
+        newEdges[1]->setPos(newEdges[1]->center());
+        newEdges[1]->createEndPoints(0, pCurrEdge->tail()->indexOnEdge() - (int)(newEdges[0]->points().size()));
+
+        // update pEdges
         pEdges.erase(pCurrEdge);
         pEdges.insert(newEdges[0]);
         pEdges.insert(newEdges[1]);
 
+        // update ind2edge and global2local
         for (int i = 0; i < (int)(pCurrEdge->points().size()); i++){
             if (i < (int)(newEdges[0]->points().size())){
                 ind2edge[edge2ind[pCurrEdge]+i] = newEdges[0];
@@ -210,11 +215,14 @@ void LabelImage::splitEdge()
                 global2local[edge2ind[pCurrEdge]+i] = i - (int)(newEdges[0]->points().size());
             }
         }
+
+        // update edge2ind
         edge2ind[newEdges[0]] = edge2ind[pCurrEdge];
         edge2ind[newEdges[1]] = edge2ind[pCurrEdge] + (int)(newEdges[0]->points().size());
         edge2ind.erase(pCurrEdge);
 
-        delete pCurrEdge;
+        // remove old edge, keep it in memory in case of reverse action
+        pCurrEdge->removeFromScene();
         pCurrEdge = NULL;
     }
 

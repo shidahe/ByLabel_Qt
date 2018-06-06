@@ -20,6 +20,11 @@ EdgeItem::EdgeItem(LabelImage *labelImage, const std::vector<QPointF>& points, i
 
 EdgeItem::~EdgeItem()
 {
+    removeFromScene();
+}
+
+void EdgeItem::removeFromScene()
+{
     if (pHead){
         if (scene())
             scene()->removeItem(pHead);
@@ -33,7 +38,6 @@ EdgeItem::~EdgeItem()
 
     if (scene())
         scene()->removeItem(this);
-
 }
 
 void EdgeItem::init(LabelImage *labelImage, const std::vector<QPointF>& points, int start, int end)
@@ -92,6 +96,17 @@ void EdgeItem::createEndPoints()
 
     if (pTail) delete pTail;
     pTail = new EndPoint(this, image, qpoints.size()-1);
+    scene()->addItem(pTail);
+}
+
+void EdgeItem::createEndPoints(int headIndex, int tailIndex)
+{
+    if (pHead) delete pHead;
+    pHead = new EndPoint(this, image, headIndex);
+    scene()->addItem(pHead);
+
+    if (pTail) delete pTail;
+    pTail = new EndPoint(this, image, tailIndex);
     scene()->addItem(pTail);
 }
 
@@ -273,7 +288,7 @@ std::vector<EdgeItem*> EdgeItem::split()
     if (!pointVisible(a) || !pointVisible(b)) return edges;
 
     EdgeItem* edge1 = new EdgeItem(image, qpoints, 0, a);
-    EdgeItem* edge2 = new EdgeItem(image, qpoints, b, qpoints.size()-1);
+    EdgeItem* edge2 = new EdgeItem(image, qpoints, b, qpoints.size()-1) ;
 
     edges.push_back(edge1);
     edges.push_back(edge2);

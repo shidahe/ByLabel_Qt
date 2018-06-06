@@ -17,10 +17,13 @@ public:
 
     void init(LabelImage *labelImage, const std::vector<QPointF>& points, int start, int end);
 
+    void removeFromScene();
+
     std::vector<QPointF> points() const;
     QPointF center() const;
 
     void createEndPoints();
+    void createEndPoints(int headIndex, int tailIndex);
     EndPoint* head() const;
     EndPoint* tail() const;
     bool pointVisible(int pointIndex) const;

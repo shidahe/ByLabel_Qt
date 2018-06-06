@@ -85,6 +85,7 @@ void EndPoint::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
     image->searchNN(event->pos(), nnEdge);
     if (parent != nnEdge)
         parent->hoverLeave();
+    // instead of recompute the nn, update a mask to prevent hover on hidden pixels
     image->updateNNMask(parent);
     update();
     QGraphicsItem::mouseReleaseEvent(event);
