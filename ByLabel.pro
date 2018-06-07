@@ -31,7 +31,8 @@ SOURCES += \
     labelimage.cpp \
     ED.cpp \
     edgeitem.cpp \
-    endpoint.cpp
+    endpoint.cpp \
+    action.cpp
 
 HEADERS += \
     labelwidget.h \
@@ -40,7 +41,8 @@ HEADERS += \
     labelimage.h \
     ED.h \
     edgeitem.h \
-    endpoint.h
+    endpoint.h \
+    action.h
 
 FORMS += \
     mainwindow.ui
