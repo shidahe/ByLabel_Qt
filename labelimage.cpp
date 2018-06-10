@@ -7,6 +7,7 @@
 #include <QKeyEvent>
 #include <QDebug>
 #include <QTime>
+#include "action.h"
 
 LabelImage::LabelImage(LabelWidget *labelWidget, const cv::Mat& image)
     : parent(labelWidget)
@@ -19,6 +20,7 @@ LabelImage::LabelImage(LabelWidget *labelWidget, const cv::Mat& image)
     pCurrEdge = NULL;
     kdtree = NULL;
     radiusNN = 10;
+    maxActionListSize = 100;
 }
 
 LabelImage::~LabelImage()
@@ -143,7 +145,7 @@ void LabelImage::hoverMoveEvent(QGraphicsSceneHoverEvent *event)
     if(prev && prev != curr) prev->hoverLeave();
     pCurrEdge = curr;
     if(curr) curr->hoverEnter(pos, localIndex);
-    QGraphicsItem::hoverMoveEvent(event);
+    QGraphicsObject::hoverMoveEvent(event);
 }
 
 void LabelImage::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
@@ -154,7 +156,7 @@ void LabelImage::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
     searchNN(pos, curr, localIndex);
     pCurrEdge = curr;
     if(curr) curr->hoverEnter(pos, localIndex);
-    QGraphicsItem::hoverEnterEvent(event);
+    QGraphicsObject::hoverEnterEvent(event);
 }
 
 void LabelImage::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
@@ -164,7 +166,17 @@ void LabelImage::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
     searchNN(lastPos, prev);
     pCurrEdge = NULL;
     if(prev) prev->hoverLeave();
-    QGraphicsItem::hoverLeaveEvent(event);
+    QGraphicsObject::hoverLeaveEvent(event);
+}
+
+void LabelImage::mousePressEvent(QGraphicsSceneMouseEvent *event)
+{
+    if (pCurrEdge) {
+        Action* act = new SelectEdge(pCurrEdge);
+        act->perform();
+        addAction(act);
+    }
+    QGraphicsObject::mousePressEvent(event);
 }
 
 QPointF LabelImage::image2item(const QPointF &pos)
@@ -184,48 +196,114 @@ EdgeItem* LabelImage::currEdge()
 
 void LabelImage::splitEdge()
 {
-    QTime myTime;
-    myTime.start();
-
-    qDebug() << "splitting edge";
-
     if (pCurrEdge && pCurrEdge->showingSplit()) {
-        std::vector<EdgeItem*> newEdges = pCurrEdge->split();
-        if (newEdges.size() != 2) return;
-
-        scene()->addItem(newEdges[0]);
-        newEdges[0]->setPos(newEdges[0]->center());
-        newEdges[0]->createEndPoints(pCurrEdge->head()->indexOnEdge(), (int)(newEdges[0]->points().size())-1);
-
-        scene()->addItem(newEdges[1]);
-        newEdges[1]->setPos(newEdges[1]->center());
-        newEdges[1]->createEndPoints(0, pCurrEdge->tail()->indexOnEdge() - (int)(newEdges[0]->points().size()));
-
-        // update pEdges
-        pEdges.erase(pCurrEdge);
-        pEdges.insert(newEdges[0]);
-        pEdges.insert(newEdges[1]);
-
-        // update ind2edge and global2local
-        for (int i = 0; i < (int)(pCurrEdge->points().size()); i++){
-            if (i < (int)(newEdges[0]->points().size())){
-                ind2edge[edge2ind[pCurrEdge]+i] = newEdges[0];
-            } else {
-                ind2edge[edge2ind[pCurrEdge]+i] = newEdges[1];
-                global2local[edge2ind[pCurrEdge]+i] = i - (int)(newEdges[0]->points().size());
-            }
-        }
-
-        // update edge2ind
-        edge2ind[newEdges[0]] = edge2ind[pCurrEdge];
-        edge2ind[newEdges[1]] = edge2ind[pCurrEdge] + (int)(newEdges[0]->points().size());
-        edge2ind.erase(pCurrEdge);
-
-        // remove old edge, keep it in memory in case of reverse action
-        pCurrEdge->removeFromScene();
+        SplitEdge* pAction = new SplitEdge(this, pCurrEdge);
+        pAction->perform();
+        addAction(pAction);
         pCurrEdge = NULL;
     }
-
-    qDebug() << myTime.elapsed();
 }
+
+void LabelImage::performSplitEdge(EdgeItem* oldEdge, EdgeItem* newEdge1, EdgeItem* newEdge2)
+{
+    scene()->addItem(newEdge1);
+    newEdge1->setPos(newEdge1->center());
+    newEdge1->createEndPoints(oldEdge->head()->indexOnEdge(), (int)(newEdge1->points().size())-1);
+
+    scene()->addItem(newEdge2);
+    newEdge2->setPos(newEdge2->center());
+    newEdge2->createEndPoints(0, oldEdge->tail()->indexOnEdge() - (int)(newEdge1->points().size()));
+
+    // update pEdges
+    pEdges.erase(oldEdge);
+    pEdges.insert(newEdge1);
+    pEdges.insert(newEdge2);
+
+    // update ind2edge and global2local
+    for (int i = 0; i < (int)(oldEdge->points().size()); i++){
+        if (i < (int)(newEdge1->points().size())){
+            ind2edge[edge2ind[oldEdge]+i] = newEdge1;
+        } else {
+            ind2edge[edge2ind[oldEdge]+i] = newEdge2;
+            global2local[edge2ind[oldEdge]+i] = i - (int)(newEdge1->points().size());
+        }
+    }
+
+    // update edge2ind
+    edge2ind[newEdge1] = edge2ind[oldEdge];
+    edge2ind[newEdge2] = edge2ind[oldEdge] + (int)(newEdge1->points().size());
+    edge2ind.erase(oldEdge);
+
+    // remove old edge, keep it in memory in case of reverse action
+    oldEdge->hoverLeave();
+    oldEdge->removeFromScene();
+}
+
+void LabelImage::reverseSplitEdge(EdgeItem* oldEdge, EdgeItem* newEdge1, EdgeItem* newEdge2)
+{
+    scene()->addItem(oldEdge);
+    oldEdge->setPos(oldEdge->center());
+    oldEdge->createEndPoints(newEdge1->head()->indexOnEdge(),
+                             (int)(newEdge1->points().size()) + newEdge2->tail()->indexOnEdge());
+
+    // update pEdges
+    pEdges.erase(newEdge1);
+    pEdges.erase(newEdge2);
+    pEdges.insert(oldEdge);
+
+    // update ind2edge and global2local
+    for (int i = 0; i < (int)(newEdge1->points().size()); i++) {
+        ind2edge[edge2ind[newEdge1]+i] = oldEdge;
+    }
+    for (int i = 0; i < (int)(newEdge2->points().size()); i++) {
+        ind2edge[edge2ind[newEdge2]+i] = oldEdge;
+        global2local[edge2ind[newEdge2]+i] = i + (int)(newEdge1->points().size());
+    }
+
+    // update edge2ind
+    edge2ind[oldEdge] = edge2ind[newEdge1];
+    edge2ind.erase(newEdge1);
+    edge2ind.erase(newEdge2);
+
+    // remove edge but keep in memory
+    newEdge1->hoverLeave();
+    newEdge2->hoverLeave();
+    newEdge1->removeFromScene();
+    newEdge2->removeFromScene();
+}
+
+void LabelImage::addAction(Action* act)
+{
+    if (actionList.size() >= maxActionListSize) {
+        Action* temp = actionList.back();
+        actionList.pop_back();
+        delete temp;
+    }
+    actionList.push_front(act);
+
+    for (auto pAction : redoList)
+        delete pAction;
+    redoList.clear();
+}
+
+void LabelImage::reverseAction()
+{
+    if (actionList.size()) {
+        Action* act = actionList.front();
+        act->reverse();
+        actionList.pop_front();
+        redoList.push_back(act);
+    }
+}
+
+void LabelImage::redoAction()
+{
+    if (redoList.size()) {
+        Action* act = redoList.back();
+        act->perform();
+        redoList.pop_back();
+        actionList.push_front(act);
+    }
+}
+
 

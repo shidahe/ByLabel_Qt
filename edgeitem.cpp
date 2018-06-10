@@ -1,7 +1,10 @@
 #include "edgeitem.h"
 #include "labelimage.h"
 #include "endpoint.h"
+#include <QGraphicsItemAnimation>
+#include <QTimeLine>
 #include <QtDebug>
+#include "action.h"
 
 EdgeItem::EdgeItem(LabelImage* labelImage, const std::list<cv::Point>& points)
 {
@@ -28,12 +31,10 @@ void EdgeItem::removeFromScene()
     if (pHead){
         if (scene())
             scene()->removeItem(pHead);
-        delete pHead;
     }
     if (pTail){
         if (scene())
             scene()->removeItem(pTail);
-        delete pTail;
     }
 
     if (scene())
@@ -66,8 +67,16 @@ void EdgeItem::init(LabelImage *labelImage, const std::vector<QPointF>& points, 
     for (auto point : qpoints)
         spoints.push_back(point - (br + tl)/2);
 
-    color = Qt::green;
+    selected = false;
+
+    colorDefault = Qt::green;
+    colorSelected = Qt::cyan;
+    colorHover = Qt::red;
+    colorBlink = Qt::yellow;
+
+    color = colorDefault;
     borderWidth = 0.1;
+    initBorderWidth = borderWidth;
     edgeWidth = 1.2;
     splitLineLength = 6;
     splitLineWidth = 0.3;
@@ -90,23 +99,23 @@ void EdgeItem::init(LabelImage *labelImage, const std::vector<QPointF>& points, 
 
 void EdgeItem::createEndPoints()
 {
-    if (pHead) delete pHead;
-    pHead = new EndPoint(this, image, 0);
+    if (!pHead)
+        pHead = new EndPoint(this, image, 0);
     scene()->addItem(pHead);
 
-    if (pTail) delete pTail;
-    pTail = new EndPoint(this, image, qpoints.size()-1);
+    if (!pTail)
+        pTail = new EndPoint(this, image, qpoints.size()-1);
     scene()->addItem(pTail);
 }
 
 void EdgeItem::createEndPoints(int headIndex, int tailIndex)
 {
-    if (pHead) delete pHead;
-    pHead = new EndPoint(this, image, headIndex);
+    if (!pHead)
+        pHead = new EndPoint(this, image, headIndex);
     scene()->addItem(pHead);
 
-    if (pTail) delete pTail;
-    pTail = new EndPoint(this, image, tailIndex);
+    if (!pTail)
+        pTail = new EndPoint(this, image, tailIndex);
     scene()->addItem(pTail);
 }
 
@@ -249,9 +258,11 @@ double EdgeItem::convertSplitIndex(const QPointF& pos, const int pointIndex)
 
 void EdgeItem::hoverEnter(const QPointF& pos, const int pointIndex)
 {
-    showSplit = true;
-    splitIndex = convertSplitIndex(pos, pointIndex);
-    color = Qt::red;
+    if (!selected) {
+        showSplit = true;
+        splitIndex = convertSplitIndex(pos, pointIndex);
+        color = colorHover;
+    }
     setZValue(1);
     if(pHead) pHead->setVisible(true);
     if(pTail) pTail->setVisible(true);
@@ -260,8 +271,10 @@ void EdgeItem::hoverEnter(const QPointF& pos, const int pointIndex)
 
 void EdgeItem::hoverLeave()
 {
-    showSplit = false;
-    color = Qt::green;
+    if (!selected) {
+        showSplit = false;
+        color = colorDefault;
+    }
     setZValue(0);
     if(pHead) pHead->setVisible(false);
     if(pTail) pTail->setVisible(false);
@@ -295,4 +308,52 @@ std::vector<EdgeItem*> EdgeItem::split()
 
     return edges;
 }
+
+void EdgeItem::blink()
+{
+    QTimeLine *timer = new QTimeLine(500);
+    timer->setFrameRange(0, 100);
+    QObject::connect(timer, SIGNAL(frameChanged(int)), this, SLOT(setBlinkParameters(int)));
+    timer->start();
+}
+
+void EdgeItem::setBlinkParameters(int animationProgress)
+{
+    double scaleFactor = 1 + 4*(100-animationProgress)/100.0;
+    if (animationProgress < 99) {
+        color = colorBlink;
+        borderWidth = initBorderWidth * scaleFactor;
+        setZValue(1);
+        if(pHead) pHead->setVisible(true);
+        if(pTail) pTail->setVisible(true);
+    } else {
+        color = selected ? colorSelected : colorDefault;
+        borderWidth = initBorderWidth;
+        setZValue(0);
+        if(pHead) pHead->setVisible(false);
+        if(pTail) pTail->setVisible(false);
+    }
+    update(boundingRect());
+}
+
+void EdgeItem::select()
+{
+    selected = true;
+    showSplit = false;
+    color = colorSelected;
+    update(boundingRect());
+}
+
+void EdgeItem::unselect()
+{
+    selected = false;
+    color = colorDefault;
+    update(boundingRect());
+}
+
+bool EdgeItem::isSelected() const
+{
+    return selected;
+}
+
 

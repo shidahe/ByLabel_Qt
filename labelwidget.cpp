@@ -90,6 +90,12 @@ void LabelWidget::keyPressEvent(QKeyEvent *event)
     case Qt::Key_Space:
         pImage->splitEdge();
         break;
+    case Qt::Key_R:
+        pImage->reverseAction();
+        break;
+    case Qt::Key_T:
+        pImage->redoAction();
+        break;
     default:
         QGraphicsView::keyPressEvent(event);
     }

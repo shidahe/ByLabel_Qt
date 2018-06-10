@@ -1,32 +1,48 @@
 #ifndef ACTION_H
 #define ACTION_H
 
-#include "edgeitem.h"
-#include "labelimage.h"
+class EdgeItem;
+class EndPoint;
+class LabelImage;
 
 class Action
 {
 public:
-    virtual void perform();
-    virtual void reverse();
+    virtual ~Action() = default;
+    virtual void perform() = 0;
+    virtual void reverse() = 0;
 };
 
-
-class SplitEdge : Action
+class EndPointMove : public Action
 {
 public:
-    SplitEdge(EdgeItem* pEdge);
+    EndPointMove(EndPoint* pPoint, unsigned int oldInd, unsigned int newInd);
 
     void perform() override;
     void reverse() override;
 
 private:
+    EndPoint* endPoint;
+    unsigned int oldIndex;
+    unsigned int newIndex;
+};
+
+class SplitEdge : public Action
+{
+public:
+    SplitEdge(LabelImage* pImage, EdgeItem* pEdge);
+
+    void perform() override;
+    void reverse() override;
+
+private:
+    LabelImage* image;
     EdgeItem* oldEdge;
     EdgeItem* newEdge1;
     EdgeItem* newEdge2;
 };
 
-class SelectEdge: Action
+class SelectEdge: public Action
 {
 public:
     SelectEdge(EdgeItem* pEdge);
@@ -37,6 +53,7 @@ public:
 private:
     EdgeItem* edge;
 };
+
 
 
 #endif // ACTION_H

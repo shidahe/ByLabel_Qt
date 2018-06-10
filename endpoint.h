@@ -1,15 +1,20 @@
 #ifndef ENDPOINT_H
 #define ENDPOINT_H
 
-#include <QGraphicsItem>
+#include <QGraphicsObject>
 #include "edgeitem.h"
 
-class EndPoint : public QGraphicsItem
+class EndPoint : public QGraphicsObject
 {
+    Q_OBJECT
 public:
     EndPoint(EdgeItem* edgeItem, LabelImage* labelImage, unsigned int pointIndex);
 
     unsigned int indexOnEdge() const;
+
+    void moveTo(unsigned int newIndex);
+
+    void blink();
 
     QRectF boundingRect() const override;
     QPainterPath shape() const override;
@@ -22,7 +27,6 @@ protected:
     void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override;
 
 private:
-    QPointF oldPos;
     double radius;
     QColor color;
     double borderWidth;
@@ -30,6 +34,8 @@ private:
     EdgeItem* parent;
     LabelImage* image;
     unsigned int index;
+    unsigned int oldIndex;
+    QPointF oldPos;
 };
 
 #endif // ENDPOINT_H

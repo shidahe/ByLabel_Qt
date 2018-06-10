@@ -2,6 +2,7 @@
 #include "labelimage.h"
 #include <QGraphicsSceneMouseEvent>
 #include <QDebug>
+#include "action.h"
 
 EndPoint::EndPoint(EdgeItem* edgeItem, LabelImage* labelImage, unsigned int pointIndex)
     : parent(edgeItem), image(labelImage), index(pointIndex)
@@ -67,28 +68,53 @@ QVariant EndPoint::itemChange(GraphicsItemChange change, const QVariant &value)
         oldPos = newPos;
         return newPos;
     }
-    return QGraphicsItem::itemChange(change, value);
+    return QGraphicsObject::itemChange(change, value);
 }
 
 void EndPoint::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
     oldPos = pos();
+    oldIndex = index;
     parent->setShowSplit(false);
-    update();
-    QGraphicsItem::mousePressEvent(event);
+    update(boundingRect());
+    QGraphicsObject::mousePressEvent(event);
 }
 
 void EndPoint::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
-    parent->setShowSplit(true);
     EdgeItem* nnEdge = NULL;
+    // instead of recompute the nn, update a mask to prevent hover on hidden pixels
+    image->updateNNMask(parent);
     image->searchNN(event->pos(), nnEdge);
     if (parent != nnEdge)
         parent->hoverLeave();
-    // instead of recompute the nn, update a mask to prevent hover on hidden pixels
+    // add action to queue
+    if (oldIndex != index)
+        image->addAction(new EndPointMove(this, oldIndex, index));
+    if (!parent->isSelected())
+        parent->setShowSplit(true);
+    update(boundingRect());
+    QGraphicsObject::mouseReleaseEvent(event);
+}
+
+void EndPoint::moveTo(unsigned int newIndex)
+{
+    bool canMove = true;
+    if (newIndex >= parent->points().size()) canMove = false;
+    if (this == parent->head() && newIndex >= parent->tail()->indexOnEdge()) canMove = false;
+    if (this == parent->tail() && newIndex <= parent->head()->indexOnEdge()) canMove = false;
+
+    if (canMove) {
+        index = newIndex;
+        QPointF newPos = parent->points()[index] + QPointF(0.5, 0.5);
+        newPos = image->image2item(newPos);
+        oldPos = newPos;
+        setPos(newPos); // will trriger itemChange
+    }
+
     image->updateNNMask(parent);
-    update();
-    QGraphicsItem::mouseReleaseEvent(event);
+    update(boundingRect());
+    parent->update(parent->boundingRect());
 }
 
 QRectF EndPoint::boundingRect() const
@@ -114,3 +140,7 @@ void EndPoint::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, 
     painter->drawPath(shape());
 }
 
+void EndPoint::blink()
+{
+    parent->blink();
+}

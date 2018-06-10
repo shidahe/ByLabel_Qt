@@ -1,15 +1,16 @@
 #ifndef EDGEITEM_H
 #define EDGEITEM_H
 
-#include <QGraphicsItem>
+#include <QGraphicsObject>
 #include <QPoint>
 #include "labelwidget.h"
 
 class LabelImage;
 class EndPoint;
 
-class EdgeItem : public QGraphicsItem
+class EdgeItem : public QGraphicsObject
 {
+    Q_OBJECT
 public:
     EdgeItem(LabelImage *labelImage, const std::list<cv::Point>& points);
     EdgeItem(LabelImage *labelImage, const std::vector<QPointF>& points, int start, int end);
@@ -44,8 +45,22 @@ public:
     bool showingSplit() const;
 
     std::vector<EdgeItem*> split();
+    void select();
+    void unselect();
+    bool isSelected() const;
+
+    void blink();
+
+public Q_SLOTS:
+    void setBlinkParameters(int animationProgress); // percentage
 
 private:
+    bool selected;
+    QColor colorDefault;
+    QColor colorHover;
+    QColor colorSelected;
+    QColor colorBlink;
+
     EndPoint* pHead;
     EndPoint* pTail;
     double splitIndex;
@@ -61,6 +76,7 @@ private:
     QRectF bbx;
     QColor color;
     double borderWidth;
+    double initBorderWidth;
     double edgeWidth;
     double padding;
     LabelImage* image;
