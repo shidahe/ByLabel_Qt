@@ -10,6 +10,8 @@ class EndPoint : public QGraphicsObject
 public:
     EndPoint(EdgeItem* edgeItem, LabelImage* labelImage, unsigned int pointIndex);
 
+    EndPoint(LabelImage* labelImage, QPointF position);
+
     unsigned int indexOnEdge() const;
 
     void moveTo(unsigned int newIndex);
@@ -29,6 +31,7 @@ protected:
 private:
     double radius;
     QColor color;
+    QColor createModeColor;
     double borderWidth;
     double padding;
     EdgeItem* parent;

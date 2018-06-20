@@ -37,6 +37,11 @@ public:
     void reverseAction();
     void redoAction();
 
+    void toggleCreateMode();
+    bool inCreateMode();
+    void enterCreateMode();
+    void exitCreateMode();
+
     QRectF boundingRect() const override;
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
 
@@ -66,6 +71,11 @@ private:
     unsigned int maxActionListSize;
     std::list<Action*> actionList;
     std::list<Action*> redoList;
+
+    // create mode
+    bool createMode;
+    std::set<EndPoint*> pStrayPoints;
+    std::vector<std::pair<EndPoint*,EndPoint*>> connections;
 };
 
 #endif // LABELIMAGE_H

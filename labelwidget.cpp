@@ -96,6 +96,9 @@ void LabelWidget::keyPressEvent(QKeyEvent *event)
     case Qt::Key_T:
         pImage->redoAction();
         break;
+    case Qt::Key_C:
+        pImage->toggleCreateMode();
+        break;
     default:
         QGraphicsView::keyPressEvent(event);
     }

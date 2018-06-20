@@ -10,6 +10,7 @@ EndPoint::EndPoint(EdgeItem* edgeItem, LabelImage* labelImage, unsigned int poin
     QPointF imagePos = parent->points()[index] + QPointF(0.5,0.5);
     radius = 1;
     color = Qt::blue;
+    createModeColor = Qt::yellow;
     borderWidth = 0.2;
     padding = borderWidth;
 
@@ -22,6 +23,25 @@ EndPoint::EndPoint(EdgeItem* edgeItem, LabelImage* labelImage, unsigned int poin
     setVisible(false);
 }
 
+EndPoint::EndPoint(LabelImage* labelImage, QPointF position)
+    : parent(NULL), image(labelImage), index(0)
+{
+    radius = 1;
+    color = Qt::blue;
+    createModeColor = Qt::yellow;
+    borderWidth = 0.2;
+    padding = borderWidth;
+
+    setPos(position);
+    oldPos = pos();
+    setFlag(ItemIsMovable);
+    setFlag(ItemSendsGeometryChanges);
+//    setCacheMode(DeviceCoordinateCache);
+    setZValue(2);
+    setVisible(false);
+}
+
+
 unsigned int EndPoint::indexOnEdge() const
 {
     return index;
@@ -30,7 +50,7 @@ unsigned int EndPoint::indexOnEdge() const
 QVariant EndPoint::itemChange(GraphicsItemChange change, const QVariant &value)
 {
     QPointF newPos = value.toPointF();
-    if (change == ItemPositionChange && scene()) {
+    if (change == ItemPositionChange && scene() && parent) {
         QPointF inc, dec;
         double len_i, len_d, len_o;
         len_i = std::numeric_limits<double>::infinity();
@@ -74,25 +94,32 @@ QVariant EndPoint::itemChange(GraphicsItemChange change, const QVariant &value)
 void EndPoint::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
     oldPos = pos();
-    oldIndex = index;
-    parent->setShowSplit(false);
+    if (parent) {
+        oldIndex = index;
+        parent->setShowSplit(false);
+    }
     update(boundingRect());
     QGraphicsObject::mousePressEvent(event);
 }
 
 void EndPoint::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
-    EdgeItem* nnEdge = NULL;
-    // instead of recompute the nn, update a mask to prevent hover on hidden pixels
-    image->updateNNMask(parent);
-    image->searchNN(event->pos(), nnEdge);
-    if (parent != nnEdge)
-        parent->hoverLeave();
-    // add action to queue
-    if (oldIndex != index)
-        image->addAction(new EndPointMove(this, oldIndex, index));
-    if (!parent->isSelected())
-        parent->setShowSplit(true);
+    if (parent) {
+        EdgeItem* nnEdge = NULL;
+        // instead of recompute the nn, update a mask to prevent hover on hidden pixels
+        image->updateNNMask(parent);
+        image->searchNN(event->pos(), nnEdge);
+        if (parent != nnEdge)
+            parent->hoverLeave();
+        // add action to queue
+        if (oldIndex != index)
+            image->addAction(new EndPointMove(this, oldIndex, index));
+        if (!parent->isSelected())
+            parent->setShowSplit(true);
+    } else {
+        //TODO: mouse handling for connecting points
+
+    }
     update(boundingRect());
     QGraphicsObject::mouseReleaseEvent(event);
 }
@@ -135,8 +162,13 @@ void EndPoint::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, 
     Q_UNUSED(option);
     Q_UNUSED(widget);
 
-    painter->setPen(QPen(color, borderWidth));
-    painter->setBrush(QBrush(color));
+    if (!image->inCreateMode()) {
+        painter->setPen(QPen(color, borderWidth));
+        painter->setBrush(QBrush(color));
+    } else {
+        painter->setPen(QPen(createModeColor, borderWidth));
+        painter->setBrush(QBrush(createModeColor));
+    }
     painter->drawPath(shape());
 }
 

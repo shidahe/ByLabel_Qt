@@ -21,6 +21,7 @@ LabelImage::LabelImage(LabelWidget *labelWidget, const cv::Mat& image)
     kdtree = NULL;
     radiusNN = 10;
     maxActionListSize = 100;
+    createMode = false;
 }
 
 LabelImage::~LabelImage()
@@ -305,5 +306,32 @@ void LabelImage::redoAction()
         actionList.push_front(act);
     }
 }
+
+void LabelImage::toggleCreateMode()
+{
+    if (inCreateMode())
+        exitCreateMode();
+    else
+        enterCreateMode();
+}
+
+bool LabelImage::inCreateMode()
+{
+    return createMode;
+}
+
+void LabelImage::enterCreateMode()
+{
+    createMode = true;
+}
+
+void LabelImage::exitCreateMode()
+{
+    createMode = false;
+}
+
+
+
+
 
 

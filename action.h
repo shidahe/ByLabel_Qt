@@ -54,6 +54,19 @@ private:
     EdgeItem* edge;
 };
 
+class ConnectPoint: public Action
+{
+public:
+    ConnectPoint(LabelImage* pImage, EndPoint* pPoint1, EndPoint* pPoint2);
+
+    void perform() override;
+    void reverse() override;
+
+private:
+    LabelImage* pImage;
+    EndPoint* pPoint1;
+    EndPoint* pPoint2;
+};
 
 
 #endif // ACTION_H
