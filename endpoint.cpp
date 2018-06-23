@@ -118,6 +118,14 @@ void EndPoint::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
             parent->setShowSplit(true);
     } else {
         //TODO: mouse handling for connecting points
+        if (image->inCreateMode() && ! image->getConnectPoint()) {
+            image->updateConnectPoint(this);
+        } else if (image->inCreateMode() && image->getConnectPoint()) {
+            Action* act = new ConnectPoint(image, image->getConnectPoint(), this, event->pos());
+            act->perform();
+            image->addAction(act);
+            image->updateConnectPoint(NULL);
+        }
 
     }
     update(boundingRect());

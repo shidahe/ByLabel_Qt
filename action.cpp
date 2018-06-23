@@ -67,5 +67,29 @@ void SelectEdge::reverse()
     edge->blink();
 }
 
+ConnectPoint::ConnectPoint(LabelImage* image, EndPoint* point1, EndPoint* point2, QPointF pos)
+{
+    pImage = image;
+    pPoint1 = point1;
+    pPoint2 = point2;
+    pos2 = pos;
+    createPoint = point2 == NULL;
+}
 
+void ConnectPoint::perform()
+{
+    if (createPoint) {
+        pPoint2 = new EndPoint(pImage, pos2);
+        pImage->addStrayPoint(pPoint2);
+    }
+    pImage->addConnection(pPoint1, pPoint2);
+}
 
+void ConnectPoint::reverse()
+{
+    if (createPoint) {
+        pImage->removeStrayPoint(pPoint2);
+        if (pPoint2) delete pPoint2;
+    }
+    pImage->removeConnection(pPoint1, pPoint2);
+}

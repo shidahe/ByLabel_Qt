@@ -22,6 +22,7 @@ LabelImage::LabelImage(LabelWidget *labelWidget, const cv::Mat& image)
     radiusNN = 10;
     maxActionListSize = 100;
     createMode = false;
+    pConnectPoint = NULL;
 }
 
 LabelImage::~LabelImage()
@@ -172,7 +173,11 @@ void LabelImage::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
 
 void LabelImage::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
-    if (pCurrEdge) {
+    if (createMode && pConnectPoint) {
+        Action* act = new ConnectPoint(this, pConnectPoint, NULL, event->pos());
+        act->perform();
+        addAction(act);
+    } else if (!createMode && pCurrEdge) {
         Action* act = new SelectEdge(pCurrEdge);
         act->perform();
         addAction(act);

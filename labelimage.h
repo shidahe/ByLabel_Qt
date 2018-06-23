@@ -41,6 +41,13 @@ public:
     bool inCreateMode();
     void enterCreateMode();
     void exitCreateMode();
+    void addStrayPoint(EndPoint* point);
+    void removeStrayPoint(EndPoint* point);
+    void addConnection(EndPoint* point1, EndPoint* point2);
+    void removeConnection(EndPoint* point1, EndPoint* point2);
+    EndPoint* getConnectPoint();
+    void updateConnectPoint(EndPoint* point);
+
 
     QRectF boundingRect() const override;
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
@@ -74,6 +81,7 @@ private:
 
     // create mode
     bool createMode;
+    EndPoint* pConnectPoint;
     std::set<EndPoint*> pStrayPoints;
     std::vector<std::pair<EndPoint*,EndPoint*>> connections;
 };

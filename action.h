@@ -1,6 +1,8 @@
 #ifndef ACTION_H
 #define ACTION_H
 
+#include <QPoint>
+
 class EdgeItem;
 class EndPoint;
 class LabelImage;
@@ -57,7 +59,7 @@ private:
 class ConnectPoint: public Action
 {
 public:
-    ConnectPoint(LabelImage* pImage, EndPoint* pPoint1, EndPoint* pPoint2);
+    ConnectPoint(LabelImage* image, EndPoint* point1, EndPoint* point2, QPointF pos);
 
     void perform() override;
     void reverse() override;
@@ -66,6 +68,8 @@ private:
     LabelImage* pImage;
     EndPoint* pPoint1;
     EndPoint* pPoint2;
+    QPointF pos2;
+    bool createPoint;
 };
 
 
