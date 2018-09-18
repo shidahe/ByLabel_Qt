@@ -133,6 +133,17 @@ void LabelImage::paint(QPainter *painter, const QStyleOptionGraphicsItem *option
     QRectF source(0.0, 0.0, qimage.width(), qimage.height());
 
     painter->drawImage(target, qimage, source);
+
+    // paint connections
+    QPainterPath path;
+    for (int i = 0; i < (int)connections.size(); i++) {
+        QVector<QPointF> points;
+        points.push_back(connections[i].first->pos());
+        points.push_back(connections[i].second->pos());
+//        QLineF line = QLineF(connections[i].first->pos(), connections[i].second->pos());
+        path.addPolygon(QPolygonF(points));
+    }
+    painter->drawPath(path);
 }
 
 void LabelImage::hoverMoveEvent(QGraphicsSceneHoverEvent *event)
@@ -173,6 +184,7 @@ void LabelImage::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
 
 void LabelImage::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
+    // TODO: NN for endpoints in createMode
     if (createMode && pConnectPoint) {
         Action* act = new ConnectPoint(this, pConnectPoint, NULL, event->pos());
         act->perform();
@@ -335,6 +347,41 @@ void LabelImage::exitCreateMode()
     createMode = false;
 }
 
+void LabelImage::addStrayPoint(EndPoint* point)
+{
+    pStrayPoints.insert(point);
+}
+
+void LabelImage::removeStrayPoint(EndPoint* point)
+{
+    pStrayPoints.erase(point);
+}
+
+void LabelImage::addConnection(EndPoint* point1, EndPoint* point2)
+{
+    connections.emplace_back(point1, point2);
+//    std::make_pair<EndPoint*,EndPoint*>(
+}
+
+void LabelImage::removeConnection(EndPoint* point1, EndPoint* point2)
+{
+    for (auto it = connections.begin(); it != connections.end(); it++) {
+        if (it->first == point1 && it->second == point2) {
+            connections.erase(it);
+            return;
+        }
+    }
+}
+
+EndPoint* LabelImage::getConnectPoint()
+{
+    return pConnectPoint;
+}
+
+void LabelImage::updateConnectPoint(EndPoint* point)
+{
+    pConnectPoint = point;
+}
 
 
 
